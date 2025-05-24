@@ -17,7 +17,7 @@ mvn package
 Now you can copy the extension jar to wherever you keep your imageviewer extensions:
 
 ```shell
-cp target/ext-iv-image-resize-1.0.tar ~/.ImageViewer/extensions/
+cp target/ext-iv-image-resize-2.1.0-SNAPSHOT.tar ~/.ImageViewer/extensions/
 ```
 
 Now restart imageviewer and hit Ctrl+S or select "Resize image" from the "Edit" menu.
