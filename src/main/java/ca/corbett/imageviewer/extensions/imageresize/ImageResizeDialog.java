@@ -1,5 +1,8 @@
 package ca.corbett.imageviewer.extensions.imageresize;
 
+import ca.corbett.forms.Margins;
+import ca.corbett.forms.fields.FormField;
+import ca.corbett.forms.fields.ValueChangedListener;
 import ca.corbett.imageviewer.ui.ImageInstance;
 import ca.corbett.imageviewer.ui.MainWindow;
 import ca.corbett.extras.image.ImageUtil;
@@ -277,75 +280,74 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
         FormPanel formPanel = new FormPanel();
 
         LabelField label = new LabelField("Proportional resize");
-        label.setMargins(28, 5, 9, 5, 5);
-        label.setFont(label.getFieldLabelFont().deriveFont(Font.BOLD, 14f));
-        formPanel.addFormField(label);
+        label.setMargins(new Margins(5, 28, 5, 9, 5));
+        label.setFont(LabelField.getDefaultFont().deriveFont(Font.BOLD, 14f));
+        formPanel.add(label);
 
         List<String> options = new ArrayList<>();
         options.add("Selected image");
         options.add("All images in this directory");
         options.add("All images recursively");
         resizeActionChooser = new ComboField("Resize:", options, 0, false);
-        resizeActionChooser.setMargins(0, 5, 0, 5, 5);
-        resizeActionChooser.addValueChangedAction(new AbstractAction() {
+        resizeActionChooser.setMargins(new Margins(5, 5, 0, 5, 5));
+        resizeActionChooser.addValueChangedListener(new ValueChangedListener() {
             @Override
-            public void actionPerformed(ActionEvent e) {
+            public void formFieldValueChanged(FormField field) {
                 boolean isCurrentImage = (resizeActionChooser.getSelectedIndex() == 0);
                 triggerChooser.setVisible(!isCurrentImage);
                 triggerValueField.setVisible(!isCurrentImage);
                 forceCheckbox.setVisible(!isCurrentImage);
                 if (isCurrentImage) {
-                    extraLabel.setFieldLabelText("Size:");
+                    extraLabel.getFieldLabel().setText("Size:");
                     extraLabel.setText(
-                            imgWidth + "x" + imgHeight + ", " + ((imgWidth > imgHeight) ? "landscape" : "portrait"));
+                        imgWidth + "x" + imgHeight + ", " + ((imgWidth > imgHeight) ? "landscape" : "portrait"));
                 }
                 else {
-                    extraLabel.setFieldLabelText("Note:");
+                    extraLabel.getFieldLabel().setText("Note:");
                     extraLabel.setText("Only jpeg and png images will be resized.");
                 }
-            }
 
+            }
         });
-        formPanel.addFormField(resizeActionChooser);
+        formPanel.add(resizeActionChooser);
 
         extraLabel = new LabelField("Note:", "Only jpg and png images will be resized.)");
-        extraLabel.setMargins(14, 5, 6, 5, 5);
-        formPanel.addFormField(extraLabel);
+        extraLabel.setMargins(new Margins(14, 5, 6, 5, 5));
+        formPanel.add(extraLabel);
 
         options = new ArrayList<>();
         options.add("Image width exceeds...");
         options.add("Image height exceeds...");
         options.add("Either width or height exceeds...");
         triggerChooser = new ComboField("Resize if:", options, 2, false);
-        triggerChooser.setMargins(12, 5, 0, 5, 5);
+        triggerChooser.setMargins(new Margins(5, 12, 0, 5, 5));
         triggerChooser.setVisible(false);
-        formPanel.addFormField(triggerChooser);
+        formPanel.add(triggerChooser);
 
         triggerValueField = new NumberField("Value: ", 1, 1, MAX_DIMENSION, 100);
-        triggerValueField.setMargins(5, 5, 5, 5, 5);
+        triggerValueField.setMargins(new Margins(5, 5, 5, 5, 5));
         triggerValueField.setVisible(false);
         triggerValueField.getFieldComponent().setPreferredSize(new Dimension(100,28));
-        formPanel.addFormField(triggerValueField);
+        formPanel.add(triggerValueField);
 
         forceCheckbox = new CheckBoxField("Do resize even if the file grows", false);
-        forceCheckbox.setMargins(5, 5, 5, 5, 5);
+        forceCheckbox.setMargins(new Margins(5, 5, 5, 5, 5));
         forceCheckbox.setVisible(false);
-        formPanel.addFormField(forceCheckbox);
+        formPanel.add(forceCheckbox);
 
         options = new ArrayList<>();
         options.add("Target width of...");
         options.add("Target height of...");
         options.add("Largest dimension of...");
-        targetChooser = new ComboField("Resize to:", options, 2, false);
-        targetChooser.setMargins(5, 5, 5, 5, 5);
-        formPanel.addFormField(targetChooser);
+        targetChooser = new ComboField<>("Resize to:", options, 2, false);
+        targetChooser.setMargins(new Margins(5, 5, 5, 5, 5));
+        formPanel.add(targetChooser);
 
         targetValueField = new NumberField("Value: ", 1, 1, MAX_DIMENSION, 100);
-        targetValueField.setMargins(5, 5, 5, 5, 5);
+        targetValueField.setMargins(new Margins(5, 5, 5, 5, 5));
         targetValueField.getFieldComponent().setPreferredSize(new Dimension(100,28));
-        formPanel.addFormField(targetValueField);
+        formPanel.add(targetValueField);
 
-        formPanel.render();
         return formPanel;
     }
 
@@ -416,7 +418,7 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
         ImageInstance image = MainWindow.getInstance().getSelectedImage();
         imgWidth = image.getImageWidth();
         imgHeight = image.getImageHeight();
-        extraLabel.setFieldLabelText("Size:");
+        extraLabel.getFieldLabel().setText("Size:");
         extraLabel.setText(imgWidth + "x" + imgHeight + ", " + ((imgWidth > imgHeight) ? "landscape" : "portrait"));
         targetValueField.setCurrentValue(imgWidth);
     }
