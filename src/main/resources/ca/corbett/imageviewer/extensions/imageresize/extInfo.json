@@ -1,9 +1,9 @@
 {
   "name": "Resize image",
   "author": "steve@corbett.ca",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "targetAppName": "ImageViewer",
-  "targetAppVersion": "2.2",
+  "targetAppVersion": "2.3",
   "shortDescription": "Resize single images or directories of images",
   "longDescription": "Presents a dialog that can be used to resize the current images. Also presents options for bulk resize operations on entire directories of images.",
   "customFields": {
