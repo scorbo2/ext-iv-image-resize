@@ -2,25 +2,45 @@
 
 ## What is this?
 
-This is an extension for ImageViewer to handle batch resizing of images. 
+This is an extension for the [ImageViewer](https://github.com/scorbo2/imageviewer) application to handle batch resizing of images. 
 
-### How do I use it?
+## How do I get it?
 
-Clone the repo and build the extension jar with maven:
+### Option 1: automatic download and install
+
+**New!** Starting with the 2.3 release of ImageViewer, you no longer have to manually build and install application extensions!
+Now, you can visit the "Available" tab in the new and improved extension manager dialog:
+
+![Extension manager](extension_manager.jpg "Extension manager")
+
+Select "Resize image" from the list on the left and then hit the "Install" button in the top right.
+If you decide later to remove the extension, come back to the extension manager dialog, select "Resize image"
+from the list on the left, and hit the "Uninstall" button in the top right. The application will prompt to restart.
+It's just that easy!
+
+### Option 2: manual download and install
+
+You can manually download the extension jar: 
+[ext-iv-image-resize-2.3.0.jar](https://www.corbett.ca/apps/ImageViewer/extensions/2.3/ext-iv-image-resize-2.3.0.jar)
+
+Save it to your ~/.ImageViewer/extensions directory and restart the application.
+
+### Option 3: build from source
+
+You can clone this repo and build the extension jar with Maven (Java 17 or higher required):
 
 ```shell
 git clone https://github.com/scorbo2/ext-iv-image-resize.git
 cd ext-iv-image-resize
 mvn package
-```
 
-Now you can copy the extension jar to wherever you keep your imageviewer extensions:
-
-```shell
+# Copy the result to extensions dir:
 cp target/ext-iv-image-resize-2.3.0.jar ~/.ImageViewer/extensions/
 ```
 
-Now restart imageviewer and hit Ctrl+S or select "Resize image" from the "Edit" menu.
+## Okay, it's installed, now how do I use it?
+
+Once ImageViewer has restarted, you can hit Ctrl+S or select "Resize image" from the "Edit" menu.
 
 If you choose to resize a single image, you will see the image's current dimensions, and will be given an opportunity to input a new maximum 
 width or height for the image to be scaled proportionally. The resized image will automatically overwrite the original image. The single-image
@@ -38,10 +58,10 @@ you specify here. You can also specify the resize target dimensions. Finally, yo
 image has a larger file size than the source image. This is handy if you are downscaling very large images to save space on disk - there's no
 point in performing such a resize if the resulting file size is larger than the input.
 
-### Requirements
+## Requirements
 
 ImageViewer 2.3 or higher.
 
-### License
+## License
 
 Imageviewer and this extension are made available under the MIT license: https://opensource.org/license/mit
