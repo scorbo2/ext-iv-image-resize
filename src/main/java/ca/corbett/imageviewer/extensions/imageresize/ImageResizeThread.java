@@ -209,7 +209,7 @@ public final class ImageResizeThread implements Runnable {
 
     private void resizeCompleteHandler() {
         MainWindow.getInstance().enableDirTree();
-        MainWindow.getInstance().reloadCurrentDirectory();
+        MainWindow.getInstance().reload();
 
         if (wasCanceled()) {
             MainWindow.getInstance()

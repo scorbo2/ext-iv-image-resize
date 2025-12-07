@@ -20,6 +20,11 @@ public class ImageResizeAction extends AbstractAction {
 
     @Override
     public void actionPerformed(ActionEvent e) {
+        if (MainWindow.getInstance().getBrowseMode() == MainWindow.BrowseMode.IMAGE_SET) {
+            MainWindow.getInstance().showMessageDialog("Resize image",
+                                                       "Resize operation is only supported for file system view.");
+            return;
+        }
         ImageInstance currentImage = MainWindow.getInstance().getSelectedImage();
         if (currentImage.isEmpty()) {
             MainWindow.getInstance().showMessageDialog("Resize image", "Nothing selected.");
