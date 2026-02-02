@@ -1,18 +1,19 @@
 package ca.corbett.imageviewer.extensions.imageresize;
 
-import ca.corbett.forms.Margins;
-import ca.corbett.forms.fields.FormField;
-import ca.corbett.forms.fields.ValueChangedListener;
-import ca.corbett.imageviewer.ui.ImageInstance;
-import ca.corbett.imageviewer.ui.MainWindow;
+import ca.corbett.extras.MessageUtil;
 import ca.corbett.extras.image.ImageUtil;
 import ca.corbett.extras.io.FileSystemUtil;
-import ca.corbett.extras.MessageUtil;
+import ca.corbett.extras.io.KeyStrokeManager;
+import ca.corbett.extras.progress.MultiProgressDialog;
+import ca.corbett.extras.progress.SimpleProgressAdapter;
 import ca.corbett.forms.FormPanel;
+import ca.corbett.forms.Margins;
 import ca.corbett.forms.fields.CheckBoxField;
 import ca.corbett.forms.fields.ComboField;
 import ca.corbett.forms.fields.LabelField;
 import ca.corbett.forms.fields.NumberField;
+import ca.corbett.imageviewer.ui.ImageInstance;
+import ca.corbett.imageviewer.ui.MainWindow;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriter;
@@ -20,20 +21,16 @@ import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import javax.swing.border.BevelBorder;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics2D;
-import java.awt.KeyEventDispatcher;
-import java.awt.KeyboardFocusManager;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -47,25 +44,26 @@ import java.util.logging.Logger;
  * Provides options for resizing (scaling) a given image, and optionally for applying a
  * bulk resize operation to all images in the given directory.
  *
- * @author scorbo2
- * @since ImageView 1.2
+ * @author <a href="https://github.com/scorbo2">scorbo2</a>
+ * @since ImageViewer 1.2
  */
-public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
+public class ImageResizeDialog extends JDialog {
 
     private static final Logger logger = Logger.getLogger(ImageResizeDialog.class.getName());
 
     private final int MAX_DIMENSION = 9999; // arbitrary
 
+    private final KeyStrokeManager keyStrokeManager;
     private MessageUtil messageUtil;
     private final File srcFile;
     private int imgWidth;
     private int imgHeight;
 
-    private ComboField resizeActionChooser;
+    private ComboField<String> resizeActionChooser;
     private LabelField extraLabel;
-    private ComboField triggerChooser;
+    private ComboField<String> triggerChooser;
     private NumberField triggerValueField;
-    private ComboField targetChooser;
+    private ComboField<String> targetChooser;
     private NumberField targetValueField;
     private CheckBoxField forceCheckbox;
 
@@ -77,44 +75,11 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
         setResizable(false);
         setLocationRelativeTo(MainWindow.getInstance());
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        setModal(true);
         initComponents();
-    }
-
-    @Override
-    public void setVisible(boolean visible) {
-        super.setVisible(visible);
-        if (visible) {
-            loadImageDetails();
-            KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
-        }
-    }
-
-    @Override
-    public void dispose() {
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
-        super.dispose();
-    }
-
-    @Override
-    public boolean dispatchKeyEvent(KeyEvent e) {
-        if (!isActive()) {
-            return false; // don't capture keystrokes if this dialog isn't showing.
-        }
-
-        if (e.getID() == KeyEvent.KEY_RELEASED) {
-            switch (e.getKeyCode()) {
-
-                case KeyEvent.VK_ESCAPE:
-                    dispose();
-                    break;
-
-                case KeyEvent.VK_ENTER:
-                    okHandler();
-                    break;
-            }
-        }
-
-        return false;
+        loadImageDetails();
+        keyStrokeManager = new KeyStrokeManager(this);
+        configureKeyStrokes();
     }
 
     /**
@@ -199,9 +164,12 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
                 || f.getName().toLowerCase().endsWith("jpeg");
     }
 
+    /**
+     * Invoked from the OK handler to do a single-image resize and dispose the dialog.
+     * If an error occurs, an error message is displayed and the dialog remains open.
+     */
     private void saveResize() {
-        if (JOptionPane.showConfirmDialog(this, "Overwrite original image with this resize?",
-                                          "Confirm", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) {
+        if (getMessageUtil().askYesNo("Confirm", "Overwrite original image with this resize?") != MessageUtil.YES) {
             return;
         }
 
@@ -212,19 +180,14 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
             return;
         }
 
+        // Figure out scale factor:
         boolean landscape = imgWidth > imgHeight;
-        float scaleFactor = 1f;
-        switch (targetChooser.getSelectedIndex()) {
-            case 0:
-                scaleFactor = (float)newValue / (float)imgWidth;
-                break;
-            case 1:
-                scaleFactor = (float)newValue / (float)imgHeight;
-                break;
-            case 2:
-                scaleFactor = landscape ? (float)newValue / (float)imgWidth : (float)newValue / (float)imgHeight;
-                break;
-        }
+        float scaleFactor = switch (targetChooser.getSelectedIndex()) {
+            case 0 -> (float)newValue / (float)imgWidth;
+            case 1 -> (float)newValue / (float)imgHeight;
+            case 2 -> landscape ? (float)newValue / (float)imgWidth : (float)newValue / (float)imgHeight;
+            default -> 1f;
+        };
 
         try {
             // Just overwrite in place, don't care about file size savings on single images:
@@ -240,12 +203,15 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
         dispose();
     }
 
+    /**
+     * Starts a worker thread to resize all images in the given directory (recursively if specified).
+     */
     private void bulkResize(boolean recursive) {
-        List<String> extensions = new ArrayList<>();
-        extensions.add("jpg");
-        extensions.add("jpeg");
-        extensions.add("png");
-        List<File> fileList = FileSystemUtil.findFiles(srcFile.getParentFile(), recursive, extensions);
+        List<File> fileList = FileSystemUtil.findFiles(srcFile.getParentFile(), recursive)
+                                            .stream()
+                                            .filter(ImageUtil::isImageFile)
+                                            .filter(this::fileExtensionIsSupported)
+                                            .toList();
         String extraPrompt = recursive ? " recursively" : "";
 
         // Sanity check resize values:
@@ -257,17 +223,22 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
             return;
         }
 
-        if (JOptionPane.showConfirmDialog(this,
-                                          "Perform bulk resize on all " + fileList.size() + " images in this directory" + extraPrompt + "?\nOriginal images will be overwritten with resized versions.",
-                                          "Confirm", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) {
+        if (getMessageUtil().askYesNo("Confirm",
+                                      "Perform bulk resize on all "
+                                          + fileList.size()
+                                          + " images in this directory"
+                                          + extraPrompt
+                                          + "?\nOriginal images will be overwritten with resized versions.")
+            != MessageUtil.YES) {
             return;
         }
 
         ImageResizeThread worker = new ImageResizeThread(fileList, getResizeTrigger(), triggerValue, getResizeTarget(),
                                                          targetValue, forceCheckbox.isChecked());
-        MainWindow.getInstance().disableDirTree();
-        new Thread(worker).start();
-        dispose();
+        MultiProgressDialog progressDialog = new MultiProgressDialog(this, "Resizing images...");
+        progressDialog.setInitialShowDelayMS(250); // Don't show for very quick operations.
+        worker.addProgressListener(new ThreadProgressListener(this, worker));
+        progressDialog.runWorker(worker, true);
     }
 
     private void initComponents() {
@@ -288,27 +259,9 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
         options.add("Selected image");
         options.add("All images in this directory");
         options.add("All images recursively");
-        resizeActionChooser = new ComboField("Resize:", options, 0, false);
+        resizeActionChooser = new ComboField<>("Resize:", options, 0, false);
         resizeActionChooser.setMargins(new Margins(5, 5, 0, 5, 5));
-        resizeActionChooser.addValueChangedListener(new ValueChangedListener() {
-            @Override
-            public void formFieldValueChanged(FormField field) {
-                boolean isCurrentImage = (resizeActionChooser.getSelectedIndex() == 0);
-                triggerChooser.setVisible(!isCurrentImage);
-                triggerValueField.setVisible(!isCurrentImage);
-                forceCheckbox.setVisible(!isCurrentImage);
-                if (isCurrentImage) {
-                    extraLabel.getFieldLabel().setText("Size:");
-                    extraLabel.setText(
-                        imgWidth + "x" + imgHeight + ", " + ((imgWidth > imgHeight) ? "landscape" : "portrait"));
-                }
-                else {
-                    extraLabel.getFieldLabel().setText("Note:");
-                    extraLabel.setText("Only jpeg and png images will be resized.");
-                }
-
-            }
-        });
+        resizeActionChooser.addValueChangedListener(f -> resizeActionChooserChanged());
         formPanel.add(resizeActionChooser);
 
         extraLabel = new LabelField("Note:", "Only jpg and png images will be resized.)");
@@ -319,7 +272,7 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
         options.add("Image width exceeds...");
         options.add("Image height exceeds...");
         options.add("Either width or height exceeds...");
-        triggerChooser = new ComboField("Resize if:", options, 2, false);
+        triggerChooser = new ComboField<>("Resize if:", options, 2, false);
         triggerChooser.setMargins(new Margins(5, 12, 0, 5, 5));
         triggerChooser.setVisible(false);
         formPanel.add(triggerChooser);
@@ -351,6 +304,27 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
         return formPanel;
     }
 
+    /**
+     * Fired when the resize action chooser value changes.
+     * We update the UI to suit the user's selection: selected image,
+     * all images in this directory, or all images recursively.
+     */
+    private void resizeActionChooserChanged() {
+        boolean isCurrentImage = (resizeActionChooser.getSelectedIndex() == 0);
+        triggerChooser.setVisible(!isCurrentImage);
+        triggerValueField.setVisible(!isCurrentImage);
+        forceCheckbox.setVisible(!isCurrentImage);
+        if (isCurrentImage) {
+            extraLabel.getFieldLabel().setText("Size:");
+            extraLabel.setText(
+                imgWidth + "x" + imgHeight + ", " + ((imgWidth > imgHeight) ? "landscape" : "portrait"));
+        }
+        else {
+            extraLabel.getFieldLabel().setText("Note:");
+            extraLabel.setText("Only jpeg and png images will be resized.");
+        }
+    }
+
     private void okHandler() {
         if (resizeActionChooser.getSelectedIndex() == 0) {
             saveResize();
@@ -367,51 +341,33 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
 
         JButton button = new JButton("OK");
         button.setPreferredSize(new Dimension(90, 23));
-        button.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                okHandler();
-            }
-
-        });
+        button.addActionListener(e -> okHandler());
         panel.add(button);
 
         button = new JButton("Cancel");
         button.setPreferredSize(new Dimension(90, 23));
-        button.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dispose();
-            }
-
-        });
+        button.addActionListener(e -> dispose());
         panel.add(button);
 
         return panel;
     }
 
     private ImageResizeThread.ResizeType getResizeTrigger() {
-        switch (triggerChooser.getSelectedIndex()) {
-            case 0:
-                return ImageResizeThread.ResizeType.Width;
-            case 1:
-                return ImageResizeThread.ResizeType.Height;
-            case 2:
-                return ImageResizeThread.ResizeType.Either;
-        }
-        return null;
+        return switch (triggerChooser.getSelectedIndex()) {
+            case 0 -> ImageResizeThread.ResizeType.Width;
+            case 1 -> ImageResizeThread.ResizeType.Height;
+            case 2 -> ImageResizeThread.ResizeType.Either;
+            default -> null;
+        };
     }
 
     private ImageResizeThread.ResizeType getResizeTarget() {
-        switch (targetChooser.getSelectedIndex()) {
-            case 0:
-                return ImageResizeThread.ResizeType.Width;
-            case 1:
-                return ImageResizeThread.ResizeType.Height;
-            case 2:
-                return ImageResizeThread.ResizeType.Either;
-        }
-        return null;
+        return switch (targetChooser.getSelectedIndex()) {
+            case 0 -> ImageResizeThread.ResizeType.Width;
+            case 1 -> ImageResizeThread.ResizeType.Height;
+            case 2 -> ImageResizeThread.ResizeType.Either;
+            default -> null;
+        };
     }
 
     private void loadImageDetails() {
@@ -423,6 +379,26 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
         targetValueField.setCurrentValue(imgWidth);
     }
 
+    /**
+     * Set up some convenient keystrokes for the dialog.
+     * ESC will close the dialog (like Cancel), ENTER will accept (like OK).
+     */
+    private void configureKeyStrokes() {
+        keyStrokeManager.clear();
+        keyStrokeManager.registerHandler("esc", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dispose();
+            }
+        });
+        keyStrokeManager.registerHandler("enter", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                okHandler();
+            }
+        });
+    }
+
     private MessageUtil getMessageUtil() {
         if (messageUtil == null) {
             messageUtil = new MessageUtil(this, Logger.getLogger(ImageResizeDialog.class.getName()));
@@ -430,4 +406,56 @@ public class ImageResizeDialog extends JDialog implements KeyEventDispatcher {
         return messageUtil;
     }
 
+    /**
+     * Provides a case-insensitive check to see if the given file has a supported image extension.
+     */
+    private boolean fileExtensionIsSupported(File f) {
+        String name = f.getName().toLowerCase();
+        return name.endsWith("jpg") || name.endsWith("jpeg") || name.endsWith("png");
+    }
+
+    /**
+     * Listens to our ImageResizeThread for completion events and reports them appropriately.
+     * Note: these callbacks fire on the worker thread, not on the Swing EDT!
+     * We need to be careful to switch to the EDT when updating the UI.
+     */
+    private static class ThreadProgressListener extends SimpleProgressAdapter {
+        private final ImageResizeDialog owner;
+        private final ImageResizeThread thread;
+
+        public ThreadProgressListener(ImageResizeDialog owner, ImageResizeThread thread) {
+            this.owner = owner;
+            this.thread = thread;
+        }
+
+        @Override
+        public void progressComplete() {
+            String msg = "The resize operation evaluated "
+                + thread.getProcessedCount()
+                + " images.\n"
+                + thread.getResizedCount()
+                + " were resized and "
+                + thread.getSkippedCount()
+                + " were skipped.\n";
+            if (thread.getProblemCount() > 0) {
+                msg += thread.getProblemCount() + " problems were encountered (see log file).";
+            }
+
+            final String m = msg;
+            SwingUtilities.invokeLater(() -> {
+                owner.dispose();
+                MainWindow.getInstance().showMessageDialog("Resize complete", m);
+            });
+        }
+
+        @Override
+        public void progressCanceled() {
+            SwingUtilities.invokeLater(() -> {
+                MainWindow.getInstance().showMessageDialog("Resize canceled",
+                                                           "The resize operation was canceled while in progress.\n"
+                                                               + thread.getResizedCount()
+                                                               + " images were resized before the cancellation.");
+            });
+        }
+    }
 }
