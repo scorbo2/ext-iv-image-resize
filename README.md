@@ -20,8 +20,8 @@ It's just that easy!
 
 ### Option 2: manual download and install
 
-You can manually download the extension jar: 
-[ext-iv-image-resize-2.3.0.jar](https://www.corbett.ca/apps/ImageViewer/extensions/2.3/ext-iv-image-resize-2.3.0.jar)
+You can manually download the extension jar:
+[ext-iv-image-resize-3.0.0.jar](https://www.corbett.ca/apps/ImageViewer/extensions/3.0/ext-iv-image-resize-3.0.0.jar)
 
 Save it to your ~/.ImageViewer/extensions directory and restart the application.
 
@@ -35,7 +35,7 @@ cd ext-iv-image-resize
 mvn package
 
 # Copy the result to extensions dir:
-cp target/ext-iv-image-resize-2.3.0.jar ~/.ImageViewer/extensions/
+cp target/ext-iv-image-resize-3.0.0.jar ~/.ImageViewer/extensions/
 ```
 
 ## Okay, it's installed, now how do I use it?
@@ -60,8 +60,8 @@ point in performing such a resize if the resulting file size is larger than the 
 
 ## Requirements
 
-ImageViewer 2.3 or higher.
+Compatible with any ImageViewer 3.x release.
 
 ## License
 
-Imageviewer and this extension are made available under the MIT license: https://opensource.org/license/mit
+ImageViewer and this extension are made available under the MIT license: https://opensource.org/license/mit
