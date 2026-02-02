@@ -210,7 +210,7 @@ public class ImageResizeDialog extends JDialog {
         List<File> fileList = FileSystemUtil.findFiles(srcFile.getParentFile(), recursive)
                                             .stream()
                                             .filter(ImageUtil::isImageFile)
-                                            .filter(this::fileExtensionIsSupported)
+                                            .filter(ImageResizeExtension::fileExtensionIsSupported)
                                             .toList();
         String extraPrompt = recursive ? " recursively" : "";
 
@@ -404,14 +404,6 @@ public class ImageResizeDialog extends JDialog {
             messageUtil = new MessageUtil(this, Logger.getLogger(ImageResizeDialog.class.getName()));
         }
         return messageUtil;
-    }
-
-    /**
-     * Provides a case-insensitive check to see if the given file has a supported image extension.
-     */
-    private boolean fileExtensionIsSupported(File f) {
-        String name = f.getName().toLowerCase();
-        return name.endsWith("jpg") || name.endsWith("jpeg") || name.endsWith("png");
     }
 
     /**

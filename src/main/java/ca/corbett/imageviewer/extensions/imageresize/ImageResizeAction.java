@@ -43,9 +43,7 @@ public class ImageResizeAction extends EnhancedAction {
 
         // Ensure correct file format:
         File file = currentImage.getImageFile();
-        if (!file.getName().toLowerCase().endsWith("jpg")
-                && !file.getName().toLowerCase().endsWith("jpeg")
-                && !file.getName().toLowerCase().endsWith("png")) {
+        if (!ImageResizeExtension.fileExtensionIsSupported(file)) {
             MainWindow.getInstance().showMessageDialog(NAME,
                                                        "Image resizing can currently only be performed on jpeg or png images.");
             return;

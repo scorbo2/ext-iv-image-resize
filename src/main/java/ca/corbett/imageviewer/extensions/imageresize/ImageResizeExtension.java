@@ -10,6 +10,7 @@ import ca.corbett.imageviewer.extensions.ImageViewerExtension;
 import ca.corbett.imageviewer.ui.MainWindow;
 import ca.corbett.imageviewer.ui.ReservedKeyStrokeWorkaround;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -80,5 +81,13 @@ public class ImageResizeExtension extends ImageViewerExtension {
         }
 
         return List.of(ImageResizeAction.getInstance());
+    }
+
+    /**
+     * Provides a case-insensitive check to see if the given file has a supported image extension.
+     */
+    public static boolean fileExtensionIsSupported(File f) {
+        String name = f.getName().toLowerCase();
+        return name.endsWith("jpg") || name.endsWith("jpeg") || name.endsWith("png");
     }
 }
