@@ -8,7 +8,6 @@ import ca.corbett.extras.properties.KeyStrokeProperty;
 import ca.corbett.imageviewer.AppConfig;
 import ca.corbett.imageviewer.extensions.ImageViewerExtension;
 import ca.corbett.imageviewer.ui.MainWindow;
-import ca.corbett.imageviewer.ui.ReservedKeyStrokeWorkaround;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -51,8 +50,8 @@ public class ImageResizeExtension extends ImageViewerExtension {
                                         KeyStrokeManager.parseKeyStroke("Ctrl+S"),
                                         ImageResizeAction.getInstance())
                       .setAllowBlank(true)
-                      .setHelpText("Show the image resize dialog")
-                      .addFormFieldGenerationListener(new ReservedKeyStrokeWorkaround()));
+                      .setReservedKeyStrokes(AppConfig.RESERVED_KEYSTROKES)
+                      .setHelpText("Show the image resize dialog"));
 
         return props;
     }
