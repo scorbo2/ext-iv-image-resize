@@ -15,8 +15,6 @@ import ca.corbett.forms.fields.NumberField;
 import ca.corbett.imageviewer.ui.ImageInstance;
 import ca.corbett.imageviewer.ui.MainWindow;
 
-import javax.imageio.ImageIO;
-import javax.imageio.ImageWriter;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -35,7 +33,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -70,8 +67,8 @@ public class ImageResizeDialog extends JDialog {
     public ImageResizeDialog(File srcFile) {
         super(MainWindow.getInstance(), "Resize image");
         this.srcFile = srcFile;
-        setSize(new Dimension(500, 390));
-        setMinimumSize(new Dimension(500, 390));
+        setSize(new Dimension(500, 400));
+        setMinimumSize(new Dimension(500, 400));
         setResizable(false);
         setLocationRelativeTo(MainWindow.getInstance());
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
@@ -116,7 +113,10 @@ public class ImageResizeDialog extends JDialog {
         int oldHeight = img.getHeight();
         int newWidth = (int)(oldWidth * scaleFactor);
         int newHeight = (int)(oldHeight * scaleFactor);
-        BufferedImage outputImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+        int imageType = img.getColorModel().hasAlpha()
+            ? BufferedImage.TYPE_INT_ARGB
+            : BufferedImage.TYPE_INT_RGB;
+        BufferedImage outputImage = new BufferedImage(newWidth, newHeight, imageType);
         Graphics2D graphics = outputImage.createGraphics();
         graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
                                   RenderingHints.VALUE_INTERPOLATION_BICUBIC);
@@ -130,22 +130,11 @@ public class ImageResizeDialog extends JDialog {
             destFile.delete();
         }
         if (isPng(srcFile)) {
-            Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName("png");
-            ImageWriter imageWriter = null;
-            if (iter.hasNext()) {
-                imageWriter = iter.next();
-            }
-            if (imageWriter == null) {
-                throw new IOException("Unable to find PNG writer on this system.");
-            }
-
-            ImageUtil.saveImage(outputImage, destFile, imageWriter, null);
+            ImageUtil.savePngImage(outputImage, destFile);
         }
-
         else if (isJpeg(srcFile)) {
             ImageUtil.saveImage(outputImage, destFile);
         }
-
         else {
             throw new IOException("Unsupported image format; must be png or jpeg image.");
         }

@@ -39,6 +39,7 @@ public class ImageResizeExtension extends ImageViewerExtension {
 
     @Override
     public void loadJarResources() {
+        // Nothing to load here
     }
 
     @Override

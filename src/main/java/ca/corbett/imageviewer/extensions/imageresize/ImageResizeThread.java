@@ -76,8 +76,8 @@ public final class ImageResizeThread extends SimpleProgressWorker {
         problemCount = 0;
         wasCanceled = false;
         int i = 0;
-        fireProgressBegins(fileList.size());
         try {
+            fireProgressBegins(fileList.size());
             for (File file : fileList) {
                 if (!fireProgressUpdate(i, "Resizing " + file.getName())) {
                     wasCanceled = true;
@@ -95,13 +95,17 @@ public final class ImageResizeThread extends SimpleProgressWorker {
                         Stopwatch.stop("imageResize");
                         if (bytesSaved < 0 && !force) {
                             skippedCount++;
-                            destFile.delete();
+                            if (!destFile.delete()) {
+                                logger.warning("Unable to delete temp file: " + destFile.getAbsolutePath());
+                            }
                             logger.log(Level.INFO, "Resizing of {0} skipped due to negative savings.",
                                        new Object[]{file.getAbsolutePath()});
                         }
                         else {
                             resizedCount++;
-                            file.delete();
+                            if (!file.delete()) {
+                                logger.warning("Unable to delete original file: " + file.getAbsolutePath());
+                            }
                             FileUtils.moveFile(destFile, file);
                             logger.log(Level.INFO,
                                        "Resizing of {0} completed with savings of {1} in {2}.",
@@ -141,36 +145,20 @@ public final class ImageResizeThread extends SimpleProgressWorker {
     }
 
     private boolean qualifiesForResize(int oldWidth, int oldHeight) {
-        boolean qualifiesForResize = false;
-        switch (trigger) {
-            case Width:
-                qualifiesForResize = oldWidth > triggerValue;
-                break;
-            case Height:
-                qualifiesForResize = oldHeight > triggerValue;
-                break;
-            case Either:
-                qualifiesForResize = (oldWidth > triggerValue) || (oldHeight > triggerValue);
-                break;
-        }
-        return qualifiesForResize;
+        return switch (trigger) {
+            case Width -> oldWidth > triggerValue;
+            case Height -> oldHeight > triggerValue;
+            case Either -> (oldWidth > triggerValue) || (oldHeight > triggerValue);
+        };
     }
 
     private float calculateScaleFactor(int oldWidth, int oldHeight) {
         boolean landscape = oldWidth >= oldHeight;
-        float scaleFactor = 1f;
-        switch (target) {
-            case Width:
-                scaleFactor = (float)targetValue / (float)oldWidth;
-                break;
-            case Height:
-                scaleFactor = (float)targetValue / (float)oldHeight;
-                break;
-            case Either:
-                scaleFactor = landscape ? (float)targetValue / (float)oldWidth : (float)targetValue / (float)oldHeight;
-                break;
-        }
-        return scaleFactor;
+        return switch (target) {
+            case Width -> (float)targetValue / (float)oldWidth;
+            case Height -> (float)targetValue / (float)oldHeight;
+            case Either -> landscape ? (float)targetValue / (float)oldWidth : (float)targetValue / (float)oldHeight;
+        };
     }
 
     private String getSizeDescription(long number) {
