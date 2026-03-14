@@ -22,7 +22,7 @@ import java.util.List;
  */
 public class ImageResizeExtension extends ImageViewerExtension {
 
-    private static final String keystrokeProp = AppConfig.KEYSTROKE_MISC_PREFIX + "imageResize";
+    private static final String KEYSTROKE_PROP = AppConfig.KEYSTROKE_MISC_PREFIX + "imageResize";
     private final AppExtensionInfo extInfo;
 
     public ImageResizeExtension() {
@@ -46,7 +46,7 @@ public class ImageResizeExtension extends ImageViewerExtension {
     protected List<AbstractProperty> createConfigProperties() {
         List<AbstractProperty> props = new ArrayList<>();
 
-        props.add(new KeyStrokeProperty(keystrokeProp,
+        props.add(new KeyStrokeProperty(KEYSTROKE_PROP,
                                         "Resize image(s):",
                                         KeyStrokeManager.parseKeyStroke("Ctrl+S"),
                                         ImageResizeAction.getInstance())
